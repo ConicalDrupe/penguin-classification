@@ -4,9 +4,10 @@ import seaborn as sns
 import sklearn 
 import os
 
-#|%%--%%| <lWWauUuS4N|DyFT9evIMi>
-
 df = pd.read_csv(os.path.join(os.getcwd(),'penguins_binary_classification.csv'))
+
+#|%%--%%| <S8ws6fP3Fg|DyFT9evIMi>
+
 
 pd.set_option("display.max_columns", None) #set options to show all columns
 
@@ -27,7 +28,17 @@ print("Size: ", len(n))
 # print("Size: ", len(df))
 
 
-#|%%--%%| <ZAdhVKZ3RE|z9Gf8hDObN>
+#|%%--%%| <ZAdhVKZ3RE|kKwUV7se4q>
+
+# Plot to see any imbalanced
+plt.figure()
+df.groupby('species').count().iloc[:,0].plot(kind='bar')
+plt.title('Balance of Species')
+plt.xlabel('Species')
+plt.ylabel('Count')
+plt.show()
+
+#|%%--%%| <kKwUV7se4q|z9Gf8hDObN>
 # Make some seaborn plots with hue
 
 g = sns.PairGrid(df,hue='species')
@@ -203,5 +214,129 @@ temp_df = pd.DataFrame({'Feature':f,
 result_df = pd.concat([result_df,temp_df])
 
 print(logit_pvalue(model, X_test))
+
+
+#|%%--%%| <TR2lUAHbGa|B5ywvC7aXX>
+import prince
+
+famd= prince.FAMD(n_components=2,
+                  n_iter=3,
+                  copy=True,
+                  check_input=True,
+                  random_state=42,
+                  engine="sklearn",
+                  handle_unknown="error"
+                  )
+
+famd = famd.fit(df)
+
+famd.eigenvalues_summary
+
+# Coordinates
+
+# famd.row_coordinates(df).head()
+famd.column_coordinates_
+
+import altair as alt
+# alt.renderers.enable("notebook")
+
+chart=famd.plot(df,
+          x_component=0,
+          y_component=1
+          )
+#|%%--%%| <B5ywvC7aXX|sRUwf9v249>
+from sklearn.decomposition import PCA
+from sklearn.preprocessing import StandardScaler
+from sklearn.model_selection import train_test_split
+
+# Taking only numeric components for PCA
+X0 = df.select_dtypes(include='number')
+Y0 = df['species']
+
+
+# no reason to train_test_split, unless we are comparing non-scaled and scaled
+x_train, x_test, y_train, y_test = train_test_split(X0,Y0, test_size=0.2, random_state=1337)
+
+scaler = StandardScaler()
+x_train_s = scaler.fit_transform(x_train)
+
+x_test_s = scaler.transform(x_test)
+pca = PCA(n_components=2)
+x_reduced = pca.fit_transform(x_train_s)
+
+
+#|%%--%%| <sRUwf9v249|XtmSpfSZpE>
+import numpy as np
+# plot PCA
+colors = y_train.map({'Adelie':'r','Gentoo':'b'})
+
+# Get Axis names
+print(pd.DataFrame(pca.components_,columns=X0.columns,index = ['PC-1','PC-2']))
+
+_, ax = plt.subplots()
+scatter = ax.scatter(x_reduced[:,0],x_reduced[:,1], c=colors)
+
+# Create legend
+# legend1 = ax.legend(scatter.legend_elements(),
+#              ('Adelie','Gentoo'),
+#               loc='lower right',
+#               title='species')
+# plt.show()
+# Get unique labels and create legend handles
+
+labels = list(y_train.unique())
+legend_handles = [plt.Line2D([0], [0], marker='o', color='w',
+                              markerfacecolor=color, markersize=10) 
+                  for color in ['r', 'b']]
+
+# Create legend
+ax.legend(handles=legend_handles, labels=labels , loc='lower right', title='species')
+evr = pca.explained_variance_ratio_
+ax.set_xlabel(f'PC-1 {evr[0]:.2%} Explained Variance')
+ax.set_ylabel(f'PC-2 {evr[1]:.2%} Explained Variance')
+
+plt.show()
+#|%%--%%| <XtmSpfSZpE|nPTCrDCLs6>
+
+print('Explained Variance Ratio: ', pca.explained_variance_ratio_)
+print('Explained Variance Ratio CumSum: ', pca.explained_variance_ratio_.cumsum())
+print('Singular Values: ', pca.singular_values_)
+
+#|%%--%%| <nPTCrDCLs6|uPKMasAyPU>
+import prince
+## Taking only categorical components for MCA (Multiple Coorespondance Analysis)
+
+X0 = df.select_dtypes(include='object')
+X0 = X0.loc[:,X0.columns != 'species']
+Y0 = df['species']
+
+mca = prince.MCA(n_components=2,
+                 engine='sklearn',
+                 random_state=1337)
+# automatically one-hot encodes
+mca = mca.fit(X0)
+
+print(mca.eigenvalues_summary)
+print(mca.row_coordinates(X0).head())
+print(mca.column_coordinates(X0).head())
+
+
+
+#|%%--%%| <uPKMasAyPU|r35WMTXeC4>
+
+# take row_coordinates and plot
+# take column_coordinates, and plot arrows
+colors = Y0.map({'Adelie':'r','Gentoo':'b'})
+coords = mca.row_coordinates(X0)
+vects = mca.column_coordinates(X0)
+_, ax2 = plt.subplots()
+scat2 = ax2.scatter(coords.iloc[:,0],coords.iloc[:,1],color=colors)
+scat3 = ax2.scatter(vects.iloc[:,0],vects.iloc[:,1])
+plt.show()
+
+#|%%--%%| <r35WMTXeC4|RlzfjsHzEj>
+# plot using plotly express
+import plotly.express as px
+# loadings = eigenvectors / sqrt(eigenvalues)
 
 
