@@ -254,13 +254,9 @@ X0 = df.select_dtypes(include='number')
 Y0 = df['species']
 
 
-# no reason to train_test_split, unless we are comparing non-scaled and scaled
-x_train, x_test, y_train, y_test = train_test_split(X0,Y0, test_size=0.2, random_state=1337)
-
 scaler = StandardScaler()
-x_train_s = scaler.fit_transform(x_train)
+x_train_s = scaler.fit_transform(X0)
 
-x_test_s = scaler.transform(x_test)
 pca = PCA(n_components=2)
 x_reduced = pca.fit_transform(x_train_s)
 
@@ -268,7 +264,7 @@ x_reduced = pca.fit_transform(x_train_s)
 #|%%--%%| <sRUwf9v249|XtmSpfSZpE>
 import numpy as np
 # plot PCA
-colors = y_train.map({'Adelie':'r','Gentoo':'b'})
+colors = Y0.map({'Adelie':'r','Gentoo':'b'})
 
 # Get Axis names
 print(pd.DataFrame(pca.components_,columns=X0.columns,index = ['PC-1','PC-2']))
@@ -296,7 +292,44 @@ ax.set_xlabel(f'PC-1 {evr[0]:.2%} Explained Variance')
 ax.set_ylabel(f'PC-2 {evr[1]:.2%} Explained Variance')
 
 plt.show()
-#|%%--%%| <XtmSpfSZpE|nPTCrDCLs6>
+#|%%--%%| <XtmSpfSZpE|qnzY1J1rl1>
+# Using plotly
+import plotly.express as px
+loadings = pca.components_.T * np.sqrt(pca.explained_variance_)
+features = list(X0.columns)
+
+# Create DataFrame from reduced data
+reduced_df = pd.DataFrame(data=x_reduced, columns=['PC1', 'PC2'])
+
+# Add species column to reduced_df
+reduced_df['species'] = df['species']
+
+fig = px.scatter(reduced_df, x='PC1', y='PC2', color='species')
+
+for i, feature in enumerate(features):
+    fig.add_annotation(
+        ax=0, ay=0,
+        axref="x", ayref="y",
+        x=loadings[i, 0],
+        y=loadings[i, 1],
+        showarrow=True,
+        arrowsize=2,
+        arrowhead=2,
+        xanchor="right",
+        yanchor="top"
+    )
+    fig.add_annotation(
+        x=loadings[i, 0],
+        y=loadings[i, 1],
+        ax=0, ay=0,
+        xanchor="center",
+        yanchor="bottom",
+        text=feature,
+        yshift=5,
+    )
+fig.show()
+
+#|%%--%%| <qnzY1J1rl1|nPTCrDCLs6>
 
 print('Explained Variance Ratio: ', pca.explained_variance_ratio_)
 print('Explained Variance Ratio CumSum: ', pca.explained_variance_ratio_.cumsum())
@@ -334,9 +367,16 @@ scat2 = ax2.scatter(coords.iloc[:,0],coords.iloc[:,1],color=colors)
 scat3 = ax2.scatter(vects.iloc[:,0],vects.iloc[:,1])
 plt.show()
 
-#|%%--%%| <r35WMTXeC4|RlzfjsHzEj>
+#|%%--%%| <r35WMTXeC4|iKqHxCWKAQ>
+
+print(mca.explained_variance_ratio)
+print(len(vects))
+print(vects)
+
+#|%%--%%| <iKqHxCWKAQ|RlzfjsHzEj>
 # plot using plotly express
 import plotly.express as px
+import prince
 # loadings = eigenvectors / sqrt(eigenvalues)
 
 
